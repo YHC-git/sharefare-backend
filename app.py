@@ -16,6 +16,11 @@ def create_app():
     # Initialize the database with the app
     db.init_app(app)
 
+    # Root route (optional, for browser confirmation)
+    @app.route('/')
+    def index():
+        return 'Welcome to ShareFare Backend API! Use /api endpoints.'
+
     # Import and register blueprints for the API routes
     from routes import api_blueprint
     app.register_blueprint(api_blueprint, url_prefix='/api')
@@ -28,5 +33,3 @@ def create_app():
 
 # Create the Flask app instance
 app = create_app()
-
-# The app.run() is not required for deployment on Render (uses gunicorn instead)
