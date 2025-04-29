@@ -3,9 +3,10 @@ from app import db
 from models import User, Ride, Booking
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# Create the blueprint for API routes
 api_blueprint = Blueprint('api', __name__)
 
-# Registration endpoint for new users
+# Route for user registration
 @api_blueprint.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -15,11 +16,9 @@ def register():
     if not email or not password:
         return jsonify({'error': 'Missing fields'}), 400
 
-    # Check if user already exists
     if User.query.filter_by(email=email).first():
         return jsonify({'error': 'User already exists'}), 400
 
-    # Hash the password and create a new user
     hashed_password = generate_password_hash(password)
     new_user = User(email=email, password=hashed_password)
     db.session.add(new_user)
@@ -27,8 +26,7 @@ def register():
 
     return jsonify({'message': 'User registered successfully'}), 201
 
-
-# Login endpoint for existing users
+# Route for user login
 @api_blueprint.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -42,15 +40,10 @@ def login():
 
     return jsonify({'message': 'Login successful', 'user_id': user.id}), 200
 
-
-# Create new ride (only driver can create)
+# Route for creating a ride
 @api_blueprint.route('/rides', methods=['POST'])
 def create_ride():
     data = request.get_json()
-    
-    # Validation for required fields
-    if not all(field in data for field in ['driver_id', 'origin', 'destination', 'date', 'time', 'available_seats']):
-        return jsonify({'error': 'Missing required fields'}), 400
 
     new_ride = Ride(
         driver_id=data['driver_id'],
@@ -66,13 +59,10 @@ def create_ride():
 
     return jsonify({'message': 'Ride created successfully'}), 201
 
-
-# Get all available rides
+# Route for retrieving all rides
 @api_blueprint.route('/rides', methods=['GET'])
 def get_rides():
     rides = Ride.query.all()
-    
-    # Return rides as a list of dictionaries
     rides_list = [{
         'id': ride.id,
         'origin': ride.origin,
@@ -84,26 +74,21 @@ def get_rides():
 
     return jsonify(rides_list)
 
-
-# Book a ride (users can book if seats are available)
+# Route for booking a ride
 @api_blueprint.route('/rides/<int:ride_id>/book', methods=['POST'])
 def book_ride(ride_id):
     data = request.get_json()
     user_id = data.get('user_id')
     seats_booked = data.get('seats_booked')
 
-    # Check if user has provided the correct info
-    if not user_id or not seats_booked:
-        return jsonify({'error': 'Missing user_id or seats_booked'}), 400
-
     ride = Ride.query.get_or_404(ride_id)
 
-    # Ensure enough seats are available
     if ride.available_seats < seats_booked:
         return jsonify({'error': 'Not enough seats available'}), 400
 
-    # Update available seats and create booking
     ride.available_seats -= seats_booked
+
+    # Create a booking entry
     booking = Booking(ride_id=ride_id, user_id=user_id, seats_booked=seats_booked)
     db.session.add(booking)
     db.session.commit()
